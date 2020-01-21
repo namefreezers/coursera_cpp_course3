@@ -34,8 +34,8 @@ public:
 		}
 	}
 
-	typename vector<IteratorRange<Iterator>>::iterator begin() { return pages.begin(); }
-	typename vector<IteratorRange<Iterator>>::iterator end() { return pages.end(); }
+	auto begin() { return pages.begin(); }
+	auto end() { return pages.end(); }
 
 	size_t size() const { return pages.size(); }
 
