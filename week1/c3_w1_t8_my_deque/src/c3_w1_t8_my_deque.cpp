@@ -29,13 +29,41 @@ public:
 		return operator[](index);
 	}
 
-	T& Front() { return front.back(); }
+	T& Front() {
+		if (!front.empty()) {
+			return front.back();
+		}
+		else {
+			return back.front();
+		}
+	}
 
-	const T& Front() const { return front.back(); }
+	const T& Front() const {
+		if (!front.empty()) {
+			return front.back();
+		}
+		else {
+			return back.front();
+		}
+	}
 
-	T& Back() { return back.back(); }
+	T& Back() {
+		if (!back.empty()) {
+			return back.back();
+		}
+		else {
+			return front.front();
+		}
+	}
 
-	const T& Back() const { return back.back(); }
+	const T& Back() const {
+		if (!back.empty()) {
+			return back.back();
+		}
+		else {
+			return front.front();
+		}
+	}
 
 	void PushFront(const T &elem) { front.push_back(elem); }
 
@@ -47,5 +75,13 @@ private:
 };
 
 int main() {
+
+	vector<int> v;
+	try {
+		cout << v[0];
+	} catch(out_of_range e) {
+
+	}
+	
 	return 0;
 }
