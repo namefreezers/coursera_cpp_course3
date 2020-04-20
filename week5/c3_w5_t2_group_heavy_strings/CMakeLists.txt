@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.16)
+project(c3_w5_t2_group_heavy_strings)
+
+set(CMAKE_CXX_STANDARD 17)
+
+add_executable(c3_w5_t2_group_heavy_strings c3_w5_t2_group_heavy_strings.cpp)
