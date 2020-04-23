@@ -13,13 +13,16 @@ using namespace std;
 template<typename T>
 class PriorityCollection {
 public:
-    using Id = T *;
+    using Id = size_t;
+    using Priority = int;
 
     // Добавить объект с нулевым приоритетом
     // с помощью перемещения и вернуть его идентификатор
     Id Add(T object) {
         objects.push_back(move(object));
-        Id id = &objects.back();
+        object_priorities.push_back(0);
+        priorities[{0, object_priorities.size() - 1}] = prev(objects.end())
+
         priorities[0].push_back(id);
         object_priorities[id] = 0;
         return id;
@@ -81,8 +84,8 @@ public:
 
 private:
     list<T> objects;
-    map<int, vector<Id>> priorities;
-    map<Id, int> object_priorities;
+    vector<Priority> object_priorities;
+    map<pair<Priority, Id>, typename list<T>::iterator> priorities;
 };
 
 
