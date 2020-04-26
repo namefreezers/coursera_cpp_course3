@@ -16,16 +16,16 @@ public:
     using Id = size_t;
     using Priority = int;
 
+    static const int DELETED = -1;
+
     // Добавить объект с нулевым приоритетом
     // с помощью перемещения и вернуть его идентификатор
-    Id Add(T object) {
+    Id Add(T&& object) {
         objects.push_back(move(object));
         object_priorities.push_back(0);
-        priorities[{0, object_priorities.size() - 1}] = prev(objects.end())
+        priorities[{0, object_priorities.size() - 1}] = prev(objects.end());
 
-        priorities[0].push_back(id);
-        object_priorities[id] = 0;
-        return id;
+        return object_priorities.size() - 1;
     }
 
     // Добавить все элементы диапазона [range_begin, range_end)
@@ -37,8 +37,9 @@ public:
                 make_move_iterator(range_begin),
                 make_move_iterator(range_end),
                 ids_begin,
-                [this](auto to_add) {  // todo: test &
-                    return Add(move(to_add));
+                [this](T&& to_add) {  // todo: test &
+//                    return Add(move(to_add));
+                    return Add(to_add);
                 }
         );
     }
@@ -47,37 +48,48 @@ public:
 // Определить, принадлежит ли идентификатор какому-либо
 // хранящемуся в контейнере объекту
     bool IsValid(Id id) const {
-        return object_priorities.count(id) != 0;
+        return id < object_priorities.size() && object_priorities[id] != DELETED;
     }
 
 // Получить объект по идентификатору
     const T &Get(Id id) const {
-        return *id;
+        return *priorities.at({object_priorities[id], id});
     }
 
 // Увеличить приоритет объекта на 1
     void Promote(Id id) {
-        auto old_priority = object_priorities[id]++;
-        auto& vector_from = priorities[old_priority];
-        auto it_old = find(begin(vector_from), end(vector_from), id);
-        priorities[old_priority+1].push_back(*it_old);
-        vector_from.erase(it_old);
+        // find
+        auto it_old = priorities.find({object_priorities[id], id});
+        // promote 1
+        object_priorities[id]++;
+        // add new
+        priorities[{object_priorities[id], id}] = it_old->second;
+        // delete old
+        priorities.erase(it_old);
     }
 
 // Получить объект с максимальным приоритетом и его приоритет
     pair<const T &, int> GetMax() const {
         auto it_pr_last = prev(priorities.end());
-        return {it_pr_last->second.back(), it_pr_last.first};
+        return {*(it_pr_last->second), it_pr_last->/*map key*/first./*priority*/first};
     }
 
 // Аналогично GetMax, но удаляет элемент из контейнера
     pair<T, int> PopMax() {
         auto it_pr_last = prev(priorities.end());
-        pair<T, int> res = {move(*it_pr_last->second.back()), it_pr_last->first};
 
-        // delete
-        it_pr_last->second.pop_back();
-        if (it_pr_last->second.empty()) { priorities.erase(it_pr_last); }
+        typename list<T>::iterator& obj_it = it_pr_last->second;
+        Priority priority = it_pr_last->first.first;
+        Id id = it_pr_last->first.second;
+
+        pair<T, int> res = {
+                move(*obj_it),
+                priority
+        };
+
+        objects.erase(obj_it);
+        object_priorities[id] = DELETED;
+        priorities.erase(it_pr_last);
 
         return res;
     }
