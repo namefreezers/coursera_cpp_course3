@@ -37,9 +37,9 @@ public:
                 make_move_iterator(range_begin),
                 make_move_iterator(range_end),
                 ids_begin,
-                [this](T&& to_add) {  // todo: test &
-//                    return Add(move(to_add));
-                    return Add(to_add);
+                [this](T&& to_add) {
+                    return Add(move(to_add));
+//                    return Add(forward<T>(to_add));
                 }
         );
     }
@@ -141,8 +141,24 @@ void TestNoCopy() {
     }
 }
 
+void TestNoCopy2()
+{
+    PriorityCollection<StringNonCopyable> strings;
+
+    std::vector<StringNonCopyable> words;
+    words.emplace_back("a");
+    words.emplace_back("b");
+    words.emplace_back("c");
+
+    std::vector<int> indexes;
+    strings.Add(words.begin(), words.end(), std::back_inserter(indexes));
+    for (int i : indexes)
+        std::cout << i << ' ';
+}
+
 int main() {
     TestRunner tr;
     RUN_TEST(tr, TestNoCopy);
+    RUN_TEST(tr, TestNoCopy2);
     return 0;
 }
