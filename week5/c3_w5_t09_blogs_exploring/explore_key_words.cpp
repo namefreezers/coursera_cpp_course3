@@ -2,6 +2,7 @@
 #include "profile.h"
 
 #include <algorithm>
+#include <deque>
 #include <future>
 #include <map>
 #include <string>
@@ -19,33 +20,54 @@ struct Stats {
     }
 };
 
-Stats ExploreLine(const set<string> &key_words, const string &line) {
-    string_view line_sv(line);
-    size_t end_of_cur;
-    while ((end_of_cur = line_sv.find(' ')) != string_view::npos) {
-        key_words.count(line_sv.substr(0, end_of_cur));
+// GroupLines - набор строк, обрабатываемых одним потоком
+using GroupLines = vector<string>;
 
-    }
-    return {};
-}
+Stats ExploreGroupLines(const set<string> &key_words, const GroupLines &lines) {
+    Stats stats;
 
-Stats ExploreKeyWordsSingleThread(
-        const set<string> &key_words, istream &input
-) {
-    Stats result;
-    for (string line; getline(input, line);) {
-        result += ExploreLine(key_words, line);
+    for (const string &line : lines) {
+        istringstream is(line);
+        string word;
+        while (is >> word) {
+            if (key_words.count(word) != 0) {
+                stats.word_frequences[move(word)]++;
+            }
+        }
     }
-    return result;
+
+    return stats;
 }
 
 Stats ExploreKeyWords(const set<string> &key_words, istream &input) {
-    vector<future<Stats>> futures;
-    string s;
-    while (getline(input, s)) {
+    const size_t GROUP_SIZE = 5000;
 
+    vector<future<Stats>> futures;
+
+    deque<GroupLines> deque_groups;
+    while (true) {
+        GroupLines current_group;
+        current_group.reserve(GROUP_SIZE);
+
+        string input_line;
+        for (size_t count = 0; count < GROUP_SIZE && getline(input, input_line); count++) {
+            current_group.push_back(move(input_line));
+        }
+        deque_groups.push_back(move(current_group));
+
+        if (deque_groups.back().empty()) { break; }
+
+        futures.push_back(async(
+                ExploreGroupLines, ref(key_words), ref(deque_groups.back())
+        ));
     }
-    return {};
+
+    Stats stats;
+    for (auto &f : futures) {
+        stats += f.get();
+    }
+
+    return stats;
 }
 
 void TestBasic() {
@@ -59,11 +81,13 @@ void TestBasic() {
     ss << "Goondex really sucks, but yangle rocks. Use yangle\n";
 
     const auto stats = ExploreKeyWords(key_words, ss);
+
     const map<string, int> expected = {
             {"yangle", 6},
             {"rocks",  2},
             {"sucks",  1}
     };
+
     ASSERT_EQUAL(stats.word_frequences, expected);
 }
 
@@ -71,20 +95,3 @@ int main() {
     TestRunner tr;
     RUN_TEST(tr, TestBasic);
 }
-
-//#include <functional>
-//#include <iostream>
-//#include <vector>
-//
-//using namespace std;
-//
-//void f(vector<int>& v) {
-//    v.push_back(5);
-//    cout << v.size();
-//}
-//
-//int main() {
-//    const vector<int> v = {1,2,3};
-//    f(ref(v));
-//    cout << v.size();
-//}
