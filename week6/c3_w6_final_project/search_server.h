@@ -7,29 +7,41 @@
 #include <vector>
 #include <map>
 #include <string>
+
 using namespace std;
+
+using Count = int;
+using Id = size_t;
 
 class InvertedIndex {
 public:
-  void Add(const string& document);
-  list<size_t> Lookup(const string& word) const;
+    void Add(string &&document);
 
-  const string& GetDocument(size_t id) const {
-    return docs[id];
-  }
+    const map<Id, Count> &Lookup(const string &word) const;
+
+    const string &GetDocument(Id id) const {
+        return docs[id];
+    }
 
 private:
-  map<string, list<size_t>> index;
-  vector<string> docs;
+    map<string, map<Id, Count>> index;
+    vector<string> docs;
+    static const map<Id, Count> EMPTY;  // todo
 };
 
 class SearchServer {
 public:
-  SearchServer() = default;
-  explicit SearchServer(istream& document_input);
-  void UpdateDocumentBase(istream& document_input);
-  void AddQueriesStream(istream& query_input, ostream& search_results_output);
+    SearchServer() = default;
+
+    explicit SearchServer(istream &document_input);
+
+    void UpdateDocumentBase(istream &document_input);
+
+    void AddQueriesStream(istream &query_input, ostream &search_results_output);
 
 private:
-  InvertedIndex index;
+    void MergeMap(map<Id, Count>& to, const map<Id, Count>& from);
+
+private:
+    InvertedIndex index;
 };
