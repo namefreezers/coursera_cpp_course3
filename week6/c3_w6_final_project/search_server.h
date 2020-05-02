@@ -1,3 +1,6 @@
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "modernize-use-nodiscard"
+
 #pragma once
 
 #include <istream>
@@ -11,22 +14,41 @@
 using namespace std;
 
 using Count = int;
-using Id = size_t;
+using WordId = uint16_t;
+using DocId = uint16_t;
+
+struct ResCountDocId {
+    Count count;
+    DocId doc_id;
+};
+
+bool operator<(const ResCountDocId &lhs, const ResCountDocId &rhs);
+
+ostream &operator<<(ostream &os, const ResCountDocId &lhs);
 
 class InvertedIndex {
 public:
     void Add(string &&document);
 
-    const map<Id, Count> &Lookup(const string &word) const;
+    const map<DocId, Count> &Lookup(const string &word) const;
 
-    const string &GetDocument(Id id) const {
-        return docs[id];
-    }
+    const string &GetDocument(DocId id) const { return docs[id]; }
+
+    DocId DocsSize() const { return docs.size(); }
 
 private:
-    map<string, map<Id, Count>> index;
+    WordId GetWordIndexOrCreate(const string &word);
+
+    WordId GetWordIndexOrMinus1(const string &word) const;
+
+private:
+    map<string, WordId> words;
+    vector<map<DocId, Count>> index = vector<map<DocId, Count>>(10000);  // index - WordId
+
     vector<string> docs;
-    static const map<Id, Count> EMPTY;  // todo
+
+    static const map<DocId, Count> EMPTY;  // todo
+    static const WordId WORD_NOT_PRESENT;
 };
 
 class SearchServer {
@@ -39,9 +61,15 @@ public:
 
     void AddQueriesStream(istream &query_input, ostream &search_results_output);
 
-private:
-    void MergeMap(map<Id, Count>& to, const map<Id, Count>& from);
+    DocId DocsSize() const { return index.DocsSize(); }
 
 private:
     InvertedIndex index;
+    static const DocId MAX_DOC_AMOUNT = 50'000;
+
+    void MergeRes(array<Count, MAX_DOC_AMOUNT> &to, const map<DocId, Count> &from);
+
+    void InsertToSortedArray(array<ResCountDocId, 5> &to, ResCountDocId cur_count_docId);
 };
+
+#pragma clang diagnostic pop
