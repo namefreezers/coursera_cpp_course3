@@ -32,6 +32,10 @@ ostream &operator<<(ostream &os, const ResCountDocId &lhs);
 
 class InvertedIndex {
 public:
+    InvertedIndex() {
+        index.reserve(MAX_WORD_AMOUNT);
+    }
+
     InvertedIndex &operator=(InvertedIndex &&);
 
     void Add(string &&document);
@@ -53,10 +57,11 @@ private:
     map<string, WordId> words;
     // Для каждого из 10'000 слов сопоставляем словарь, в котором для каждого документа считаем вхождение слова WordId в него.
     // а именно в index[word_id][doc_id] хранится количество вхождений слов 'word_id' в 'doc_id'
-    vector<map<DocId, Count>> index = vector<map<DocId, Count>>(10000);  // index - WordId.
+    vector<map<DocId, Count>> index;  // index - WordId.
 
     static const map<DocId, Count> EMPTY;  // todo
-    static const WordId WORD_NOT_PRESENT;
+    static const WordId WORD_NOT_PRESENT = -1;
+    static const WordId MAX_WORD_AMOUNT = 15'000;
 };
 
 
@@ -83,7 +88,7 @@ private:
 
     void InsertIntoSortedArray5(array<ResCountDocId, 5> &to, ResCountDocId cur_count_docId);
 
-    array<ResCountDocId, 5> getTop5(const array<Count, MAX_DOC_AMOUNT> &res_counts_by_document);
+    array<ResCountDocId, 5> getTop5(const array<Count, MAX_DOC_AMOUNT> &hitcounts_by_document);
 
     array<ResCountDocId, 5> ServeOneQuery(const string &current_query);
 

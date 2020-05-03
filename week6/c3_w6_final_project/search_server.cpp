@@ -30,7 +30,6 @@ ostream &operator<<(ostream &os, const ResCountDocId &r) {
 // ============================== Inverted Index ==============================================
 
 const map<DocId, Count> InvertedIndex::EMPTY = {};
-const WordId InvertedIndex::WORD_NOT_PRESENT = -1;
 
 InvertedIndex &InvertedIndex::operator=(InvertedIndex &&other) {
     words = move(other.words);
@@ -61,7 +60,10 @@ void InvertedIndex::Add(string &&document) {
     for (string &word : SplitIntoWords(docs.back())) {
         WordId word_id = GetWordIndexOrCreate(word);
 
+//        if (word_id >= 12500) {throw out_of_range("line 64: " + to_string(word_id));} // todo remove
+
         // todo rework for vector of pairs;
+        if (word_id >= index.size()) { index.emplace_back(); }
         map<DocId, Count> &counts_of_cur_word = index[word_id];
 
         if (!counts_of_cur_word.empty() && prev(counts_of_cur_word.end())->first == docid) {
@@ -74,6 +76,7 @@ void InvertedIndex::Add(string &&document) {
 
 const map<DocId, Count> &InvertedIndex::Lookup(const string &word) const {
     WordId word_id = GetWordIndexOrMinus1(word);
+//    if (word_id >= 12500 && word_id != WORD_NOT_PRESENT) {throw out_of_range("line 79");} // todo remove
     return (word_id != WORD_NOT_PRESENT) ? index[word_id] : EMPTY;
 }
 
@@ -103,6 +106,7 @@ array<Count, SearchServer::MAX_DOC_AMOUNT> SearchServer::CalculateMetricsForEach
         // для каждого слова из запроса
         const map<DocId, Count> &counts_of_current_word = index.Lookup(word);
         for (auto[doc_id, count_of_word_in_doc_id] : counts_of_current_word) {
+//            if (doc_id >= MAX_DOC_AMOUNT) {throw out_of_range("line 108");} // todo remove
             res_counts_by_document[doc_id] += count_of_word_in_doc_id;
         }
     }
@@ -121,14 +125,16 @@ void SearchServer::InsertIntoSortedArray5(array<ResCountDocId, 5> &to, ResCountD
     to[possibly_less_that_idx - 1] = cur_count_docId;
 }
 
-array<ResCountDocId, 5> SearchServer::getTop5(const array<Count, SearchServer::MAX_DOC_AMOUNT> &res_counts_by_document) {
+array<ResCountDocId, 5> SearchServer::getTop5(const array<Count, SearchServer::MAX_DOC_AMOUNT> &hitcounts_by_document) {
 
     // Результат. Формируется как отсортированный массив из топ пяти документов среди обработанных.
     // Новый документ при добавлении вставляется на нужную позицию, отсортированность сохраняется.
     array<ResCountDocId, 5> res = {{{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}}};
 
     for (int doc_id = 0; doc_id < DocsSize(); doc_id++) {
-        ResCountDocId res_for_current_document{res_counts_by_document[doc_id], static_cast<DocId>(doc_id)};
+//        if (doc_id >= MAX_DOC_AMOUNT) {throw out_of_range("line 134");} // todo remove
+
+        ResCountDocId res_for_current_document{hitcounts_by_document[doc_id], static_cast<DocId>(doc_id)};
 
         if (res_for_current_document < res[0] /* если текущий документ по метрике меньше, чем последний в отсортированном массиве топ-5 - игнорируем */
             || res_for_current_document.hitcount_metric == 0 /* если метрика равна 0 - игнорируем */ ) { continue; }
