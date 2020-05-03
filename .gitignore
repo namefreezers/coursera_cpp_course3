@@ -12,4 +12,4 @@ out/
 cmake-build-debug/
 .idea/
 
-src.zip
+*.zip
