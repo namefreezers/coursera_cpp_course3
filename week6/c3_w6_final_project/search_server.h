@@ -14,14 +14,21 @@ using Count = int;
 using WordId = uint16_t;
 using DocId = uint16_t;
 
+
+// ============================== struct ResCountDocId ==============================================
+// Пара из "метрики релевантности" и "ID документа"
+
 struct ResCountDocId {
-    Count count;
+    Count hitcount_metric;
     DocId doc_id;
 };
 
 bool operator<(const ResCountDocId &lhs, const ResCountDocId &rhs);
 
 ostream &operator<<(ostream &os, const ResCountDocId &lhs);
+
+
+// ============================== Inverted Index ==============================================
 
 class InvertedIndex {
 public:
@@ -40,15 +47,20 @@ private:
 
     [[nodiscard]] WordId GetWordIndexOrMinus1(const string &word) const;
 
-private:
-    map<string, WordId> words;
-    vector<map<DocId, Count>> index = vector<map<DocId, Count>>(10000);  // index - WordId
-
     vector<string> docs;
+    // каждому слову сопоставлен индекс WordId, от 0 до 9999.
+    // Индекс ново-встретившегося слова после добавления равен (word.size() - 1)
+    map<string, WordId> words;
+    // Для каждого из 10'000 слов сопоставляем словарь, в котором для каждого документа считаем вхождение слова WordId в него.
+    // а именно в index[word_id][doc_id] хранится количество вхождений слов 'word_id' в 'doc_id'
+    vector<map<DocId, Count>> index = vector<map<DocId, Count>>(10000);  // index - WordId.
 
     static const map<DocId, Count> EMPTY;  // todo
     static const WordId WORD_NOT_PRESENT;
 };
+
+
+// ============================== Search Server ==============================================
 
 class SearchServer {
 public:
@@ -63,10 +75,16 @@ public:
     [[nodiscard]] DocId DocsSize() const { return index.DocsSize(); }
 
 private:
-    InvertedIndex index;
     static const DocId MAX_DOC_AMOUNT = 50'000;
 
-    void MergeWordResIntoResByDocument(array<Count, MAX_DOC_AMOUNT> &to, const map<DocId, Count> &from);
+    InvertedIndex index;
 
-    void InsertToSortedArray(array<ResCountDocId, 5> &to, ResCountDocId cur_count_docId);
+    array<Count, MAX_DOC_AMOUNT> CalculateMetricsForEachDocument(const string &current_query);
+
+    void InsertIntoSortedArray5(array<ResCountDocId, 5> &to, ResCountDocId cur_count_docId);
+
+    array<ResCountDocId, 5> getTop5(const array<Count, MAX_DOC_AMOUNT> &res_counts_by_document);
+
+    array<ResCountDocId, 5> ServeOneQuery(const string &current_query);
+
 };
