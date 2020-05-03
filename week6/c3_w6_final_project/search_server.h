@@ -32,6 +32,11 @@ ostream &operator<<(ostream &os, const ResCountDocId &lhs);
 
 class InvertedIndex {
 public:
+    struct WordDocumentStats {
+        DocId doc_id;
+        Count hitcount;
+    };
+
     InvertedIndex() {
         index.reserve(MAX_WORD_AMOUNT);
     }
@@ -40,11 +45,13 @@ public:
 
     void Add(string &&document);
 
-    [[nodiscard]] const map<DocId, Count> &Lookup(const string &word) const;
+    [[nodiscard]] const vector<WordDocumentStats> &Lookup(const string &word) const;
 
     [[nodiscard]] const string &GetDocument(DocId id) const { return docs[id]; }
 
     [[nodiscard]] DocId DocsSize() const { return docs.size(); }
+
+
 
 private:
     WordId GetWordIndexOrCreate(const string &word);
@@ -57,9 +64,9 @@ private:
     map<string, WordId> words;
     // Для каждого из 10'000 слов сопоставляем словарь, в котором для каждого документа считаем вхождение слова WordId в него.
     // а именно в index[word_id][doc_id] хранится количество вхождений слов 'word_id' в 'doc_id'
-    vector<map<DocId, Count>> index;  // index - WordId.
+    vector<vector<WordDocumentStats>> index;  // index - WordId.
 
-    static const map<DocId, Count> EMPTY;  // todo
+    static const vector<WordDocumentStats> EMPTY;  // todo
     static const WordId WORD_NOT_PRESENT = -1;
     static const WordId MAX_WORD_AMOUNT = 15'000;
 };

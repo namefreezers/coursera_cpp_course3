@@ -29,7 +29,7 @@ ostream &operator<<(ostream &os, const ResCountDocId &r) {
 
 // ============================== Inverted Index ==============================================
 
-const map<DocId, Count> InvertedIndex::EMPTY = {};
+const vector<InvertedIndex::WordDocumentStats> InvertedIndex::EMPTY = {};
 
 InvertedIndex &InvertedIndex::operator=(InvertedIndex &&other) {
     words = move(other.words);
@@ -62,19 +62,18 @@ void InvertedIndex::Add(string &&document) {
 
 //        if (word_id >= 12500) {throw out_of_range("line 64: " + to_string(word_id));} // todo remove
 
-        // todo rework for vector of pairs;
-        if (word_id >= index.size()) { index.emplace_back(); }
-        map<DocId, Count> &counts_of_cur_word = index[word_id];
+        if (word_id >= index.size()) { index.emplace_back(); index.back().reserve(1000); }
+        vector<WordDocumentStats> &counts_of_cur_word = index[word_id];
 
-        if (!counts_of_cur_word.empty() && prev(counts_of_cur_word.end())->first == docid) {
-            prev(counts_of_cur_word.end())->second++;  // increase
-        } else {
-            counts_of_cur_word.insert(counts_of_cur_word.end(), {docid, 1});  // or insert
+        if (counts_of_cur_word.back().doc_id != docid) {
+            counts_of_cur_word.push_back({docid, 0});
         }
+
+        counts_of_cur_word.back().hitcount++;
     }
 }
 
-const map<DocId, Count> &InvertedIndex::Lookup(const string &word) const {
+const vector<InvertedIndex::WordDocumentStats> &InvertedIndex::Lookup(const string &word) const {
     WordId word_id = GetWordIndexOrMinus1(word);
 //    if (word_id >= 12500 && word_id != WORD_NOT_PRESENT) {throw out_of_range("line 79");} // todo remove
     return (word_id != WORD_NOT_PRESENT) ? index[word_id] : EMPTY;
@@ -104,8 +103,8 @@ array<Count, SearchServer::MAX_DOC_AMOUNT> SearchServer::CalculateMetricsForEach
 
     for (const auto &word : SplitIntoWords(current_query)) {
         // для каждого слова из запроса
-        const map<DocId, Count> &counts_of_current_word = index.Lookup(word);
-        for (auto[doc_id, count_of_word_in_doc_id] : counts_of_current_word) {
+        const vector<InvertedIndex::WordDocumentStats> &counts_of_current_word = index.Lookup(word);
+        for (auto [doc_id, count_of_word_in_doc_id] : counts_of_current_word) {
 //            if (doc_id >= MAX_DOC_AMOUNT) {throw out_of_range("line 108");} // todo remove
             res_counts_by_document[doc_id] += count_of_word_in_doc_id;
         }
