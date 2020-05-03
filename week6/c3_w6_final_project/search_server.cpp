@@ -1,5 +1,4 @@
 #include "search_server.h"
-#include "iterator_range.h"
 
 #include <algorithm>
 #include <array>
@@ -37,7 +36,7 @@ void SearchServer::UpdateDocumentBase(istream &document_input) {
     index = move(new_index);
 }
 
-void SearchServer::MergeRes(array<Count, MAX_DOC_AMOUNT> &to, const map<DocId, Count> &from) {
+void SearchServer::MergeWordResIntoResByDocument(array<Count, MAX_DOC_AMOUNT> &to, const map<DocId, Count> &from) {
     if (from.empty()) { return; }
     for (auto[doc_id, count_of_word] : from) {
         to[doc_id] += count_of_word;
@@ -57,22 +56,22 @@ void SearchServer::InsertToSortedArray(array<ResCountDocId, 5> &to, ResCountDocI
 }
 
 void SearchServer::AddQueriesStream(istream &query_input, ostream &search_results_output) {
-    array<Count, MAX_DOC_AMOUNT> res_docid_count;
+    array<Count, MAX_DOC_AMOUNT> res_counts_by_document;
     for (string current_query; getline(query_input, current_query);) {
-        res_docid_count.fill(0);
+        res_counts_by_document.fill(0);
 
         const auto words = SplitIntoWords(current_query);
 
         for (const auto &word : words) {
             const map<DocId, Count> &docid_count_word = index.Lookup(word);
-            MergeRes(res_docid_count, docid_count_word);
+            MergeWordResIntoResByDocument(res_counts_by_document, docid_count_word);
         }
 
         const ResCountDocId absolute_min = {0, static_cast<DocId>(-1)};
         array<ResCountDocId, 5> res = {{absolute_min, absolute_min, absolute_min, absolute_min, absolute_min}};
 
         for (int doc_id = 0; doc_id < DocsSize(); doc_id++) {
-            ResCountDocId cur_docId_count_for_word{res_docid_count[doc_id], static_cast<DocId>(doc_id)};
+            ResCountDocId cur_docId_count_for_word{res_counts_by_document[doc_id], static_cast<DocId>(doc_id)};
             if (cur_docId_count_for_word < res[0] || cur_docId_count_for_word.count == 0) { continue; }
 
             InsertToSortedArray(res, cur_docId_count_for_word);
@@ -89,6 +88,14 @@ void SearchServer::AddQueriesStream(istream &query_input, ostream &search_result
 
 const map<DocId, Count> InvertedIndex::EMPTY = {};
 const WordId InvertedIndex::WORD_NOT_PRESENT = -1;
+
+
+InvertedIndex &InvertedIndex::operator=(InvertedIndex &&other) {
+    words = move(other.words);
+    index = move(other.index);
+    docs = move(other.docs);
+    return *this;
+}
 
 WordId InvertedIndex::GetWordIndexOrCreate(const string &word) {
     auto it = words.lower_bound(word);

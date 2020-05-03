@@ -1,6 +1,3 @@
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "modernize-use-nodiscard"
-
 #pragma once
 
 #include <istream>
@@ -28,18 +25,20 @@ ostream &operator<<(ostream &os, const ResCountDocId &lhs);
 
 class InvertedIndex {
 public:
+    InvertedIndex &operator=(InvertedIndex &&);
+
     void Add(string &&document);
 
-    const map<DocId, Count> &Lookup(const string &word) const;
+    [[nodiscard]] const map<DocId, Count> &Lookup(const string &word) const;
 
-    const string &GetDocument(DocId id) const { return docs[id]; }
+    [[nodiscard]] const string &GetDocument(DocId id) const { return docs[id]; }
 
-    DocId DocsSize() const { return docs.size(); }
+    [[nodiscard]] DocId DocsSize() const { return docs.size(); }
 
 private:
     WordId GetWordIndexOrCreate(const string &word);
 
-    WordId GetWordIndexOrMinus1(const string &word) const;
+    [[nodiscard]] WordId GetWordIndexOrMinus1(const string &word) const;
 
 private:
     map<string, WordId> words;
@@ -61,15 +60,13 @@ public:
 
     void AddQueriesStream(istream &query_input, ostream &search_results_output);
 
-    DocId DocsSize() const { return index.DocsSize(); }
+    [[nodiscard]] DocId DocsSize() const { return index.DocsSize(); }
 
 private:
     InvertedIndex index;
     static const DocId MAX_DOC_AMOUNT = 50'000;
 
-    void MergeRes(array<Count, MAX_DOC_AMOUNT> &to, const map<DocId, Count> &from);
+    void MergeWordResIntoResByDocument(array<Count, MAX_DOC_AMOUNT> &to, const map<DocId, Count> &from);
 
     void InsertToSortedArray(array<ResCountDocId, 5> &to, ResCountDocId cur_count_docId);
 };
-
-#pragma clang diagnostic pop
